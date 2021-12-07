@@ -1,0 +1,13 @@
+    # Dockerfile  
+    FROM node:14-alpine
+    WORKDIR /app  
+
+    COPY package.json .
+
+    COPY . .
+
+    RUN yarn
+
+    EXPOSE 8026
+
+    CMD ["yarn", "start"]

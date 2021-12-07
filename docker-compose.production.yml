@@ -1,0 +1,83 @@
+version: "3"
+services:
+    app:
+        container_name: va-app
+        restart: always
+        build:
+            context: ./
+            dockerfile: Dockerfile
+        ports:
+            - "8026:8026"
+        depends_on:
+            - mongosetup
+    mongo1:
+        image: mongo:4.2
+        container_name: mongo1
+        command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27019"]
+        ports:
+            - 27019:27019
+        healthcheck:
+            test: test $$(echo "rs.initiate({_id:'rs0',members:[{_id:0,host:\"localhost:27019\"},{_id:1,host:\"localhost:27022\"},{_id:2,host:\"localhost:27023\"}]}).ok || rs.status().ok" | mongo --port 30001 --quiet) -eq 1
+            interval: 10s
+            start_period: 30s
+
+    mongo2:
+        image: mongo:4.2
+        container_name: mongo2
+        command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27022"]
+        ports:
+            - 27022:27022
+
+    mongo3:
+        image: mongo:4.2
+        container_name: mongo3
+        command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27023"]
+        ports:
+            - 27023:27023
+    # mongo1:
+    #     hostname: mongo1
+    #     container_name: localmongo1
+    #     image: mongo:4.2
+    #     expose:
+    #             - 27019
+    #     ports: 
+    #         - 27019:27019 
+    #     restart: always
+    #     entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0" ]
+    # mongo2:
+    #     hostname: mongo2
+    #     container_name: localmongo2
+    #     image: mongo:4.2
+    #     expose:
+    #             - 27022
+    #     ports: 
+    #         - 27022:27022 
+    #     restart: always
+    #     entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0" ]
+    # mongo3:
+    #     hostname: mongo3
+    #     container_name: localmongo3
+    #     image: mongo:4.2
+    #     expose:
+    #             - 27023
+    #     ports: 
+    #         - 27023:27023 
+    #     restart: always
+    #     entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0" ]
+    mongosetup:
+        image: mongo:4.2
+        container_name: mongodb_va
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: 
+            MONGO_INITDB_ROOT_PASSWORD: 
+            MONGO_INITDB_DATABASE: va_database
+        ports:
+            - 27024:27024
+        depends_on:
+            - mongo1
+            - mongo2
+            - mongo3
+        volumes:
+        - .:/scripts
+        restart: "no"
+        entrypoint: [ "bash", "/scripts/mongo_setup.sh"]

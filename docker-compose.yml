@@ -1,0 +1,56 @@
+version: "3.8"
+services:
+    mongo1:
+        image: mongo:4.2
+        container_name: mongo1
+        command: ["--replSet", "myRepl", "--bind_ip_all", "--port", "30001"]
+        restart: always
+        ports:
+            - 30001:30001
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: 
+            MONGO_INITDB_ROOT_PASSWORD: 
+            MONGO_INITDB_DATABASE: va_database
+        healthcheck:
+            test: test $$(echo "rs.initiate({_id:'myRepl',members:[{_id:0,host:\"192.168.22.180:30001\"},{_id:1,host:\"192.168.22.180:30002\"},{_id:2,host:\"192.168.22.180:30003\"}]}).ok || rs.status().ok" | mongo --port 30001 --quiet) -eq 1
+            interval: 10s
+            start_period: 30s
+        volumes:
+            - './data:/data/mongo1'
+    mongo2:
+        image: mongo:4.2
+        restart: always
+        container_name: mongo2
+        command: ["--replSet", "myRepl", "--bind_ip_all", "--port", "30002"]
+        ports:
+            - 30002:30002
+        volumes:
+            - './data:/data/mongo2'
+    mongo3:
+        image: mongo:4.2
+        restart: always
+        container_name: mongo3
+        command: ["--replSet", "myRepl", "--bind_ip_all", "--port", "30003"]
+        ports:
+            - 30003:30003
+        volumes:
+            - './data:/data/mongo3'
+    mongo-express:
+        image: mongo-express
+        restart: always
+        ports:
+            - 8081:8081
+        depends_on:
+            - mongo1
+        environment:
+            ME_CONFIG_MONGODB_URL: mongodb://192.168.22.180:30001,192.168.22.180:30002,192.168.22.180:30003/va_database?replicaSet=myRepl
+
+#     # va:
+#     #     container_name: va-app
+#     #     image: va-app
+#     #     restart: always
+#     #     build: .
+#     #     ports:
+#     #         - "7500:8001"
+#     #     depends_on:
+#     #         - mongo1
